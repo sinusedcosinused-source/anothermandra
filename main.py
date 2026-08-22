@@ -12,7 +12,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-COGS = ["stone", "fun", "admin", "honor", "events", "uwufy"]
+COGS = ["stone", "fun", "admin", "honor", "events", "uwufy", "counting"]
 
 
 @bot.event
