@@ -9,6 +9,8 @@ replacement_words = ["he'ww", "fwick", "bwitch", "bastawd", "nyahh"]
 uwus = ["uwu", "owo", "~~", ":3"]
 
 LOG_CHANNEL_ID = 1540709807370018887
+ALLOWED_ROLE_ID = 1205591566836834424
+ALLOWED_USER_ID = 411897831885111339
 
 URL_PATTERN = re.compile(r'https?://\S+|www\.\S+')
 
@@ -34,6 +36,14 @@ def uwuify(text):
         text = text.replace(f"\x00{i}\x00", url)
 
     return text
+
+
+def is_allowed(interaction: discord.Interaction) -> bool:
+    if interaction.user.id == ALLOWED_USER_ID:
+        return True
+    if isinstance(interaction.user, discord.Member):
+        return any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles)
+    return False
 
 
 class Uwyfy(commands.Cog):
@@ -92,7 +102,7 @@ class Uwyfy(commands.Cog):
             pass
 
     @app_commands.command(name="uwulock", description="Abandon all hope ye who use this command")
-    @app_commands.checks.has_permissions(manage_messages=True)
+    @app_commands.check(is_allowed)
     async def uwulock(self, interaction: discord.Interaction, member: discord.Member):
         if member.id in self.locked:
             await interaction.response.send_message(f"**{member.display_name}** is already uwulocked.", ephemeral=True)
@@ -103,7 +113,7 @@ class Uwyfy(commands.Cog):
         await self.log_action("Locked", interaction.user, member)
 
     @app_commands.command(name="uwuunlock", description="release a user from uwulock")
-    @app_commands.checks.has_permissions(manage_messages=True)
+    @app_commands.check(is_allowed)
     async def uwuunlock(self, interaction: discord.Interaction, member: discord.Member):
         if member.id not in self.locked:
             await interaction.response.send_message(f"**{member.display_name}** isn't uwulocked.", ephemeral=True)
@@ -111,7 +121,7 @@ class Uwyfy(commands.Cog):
 
         if interaction.user.id == member.id:
             await interaction.response.send_message(
-                "the curse may only be lifted by another", ephemeral=True
+                "You can't unlock yourself — get another mod to do it.", ephemeral=True
             )
             return
 
@@ -122,7 +132,7 @@ class Uwyfy(commands.Cog):
     @uwulock.error
     @uwuunlock.error
     async def uwulock_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.MissingPermissions):
+        if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message("Your mortal mind cannot fathom such a destructive spell", ephemeral=True)
         else:
             raise error
