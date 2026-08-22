@@ -33,7 +33,7 @@ class Counting(commands.Cog):
             return
 
         number = int(content)
-        if (number-1) in FUNNY_NUMBERS:
+        if (number) in FUNNY_NUMBERS:
             await message.channel.send(FUNNY_NUMBERS[number])
 
 
