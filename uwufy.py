@@ -18,6 +18,7 @@ def uwuify(text):
     text = re.sub(r'n([aeiou])', r'ny\1', text)
     for trigger, replacement in zip(triggerwords, replacement_words):
         text = re.sub(r'\b' + re.escape(trigger) + r'\b', replacement, text, flags=re.IGNORECASE)
+    text = text.rstrip() + ' ' + choice(uwus)
     return text
 
 
