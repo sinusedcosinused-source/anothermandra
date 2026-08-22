@@ -10,8 +10,18 @@ uwus = ["uwu", "owo", "~~", ":3"]
 
 LOG_CHANNEL_ID = 1540709807370018887
 
+URL_PATTERN = re.compile(r'https?://\S+|www\.\S+')
+
 
 def uwuify(text):
+    urls = []
+
+    def stash_url(match):
+        urls.append(match.group(0))
+        return f"\x00{len(urls) - 1}\x00"
+
+    text = URL_PATTERN.sub(stash_url, text)
+
     text = re.sub(r'[rl]', 'w', text)
     text = re.sub(r'[RL]', 'W', text)
     text = re.sub(r'([.!?])', lambda m: m.group(1) + ' ' + choice(uwus), text)
@@ -19,6 +29,10 @@ def uwuify(text):
     for trigger, replacement in zip(triggerwords, replacement_words):
         text = re.sub(r'\b' + re.escape(trigger) + r'\b', replacement, text, flags=re.IGNORECASE)
     text = text.rstrip() + ' ' + choice(uwus)
+
+    for i, url in enumerate(urls):
+        text = text.replace(f"\x00{i}\x00", url)
+
     return text
 
 
@@ -80,6 +94,10 @@ class Uwyfy(commands.Cog):
     @app_commands.command(name="uwulock", description="Abandon all hope ye who use this command")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def uwulock(self, interaction: discord.Interaction, member: discord.Member):
+        if member.id in self.locked:
+            await interaction.response.send_message(f"**{member.display_name}** is already uwulocked.", ephemeral=True)
+            return
+
         self.locked.add(member.id)
         await interaction.response.send_message(f"Added **{member.display_name}** to uwulock.")
         await self.log_action("Locked", interaction.user, member)
@@ -87,6 +105,16 @@ class Uwyfy(commands.Cog):
     @app_commands.command(name="uwuunlock", description="release a user from uwulock")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def uwuunlock(self, interaction: discord.Interaction, member: discord.Member):
+        if member.id not in self.locked:
+            await interaction.response.send_message(f"**{member.display_name}** isn't uwulocked.", ephemeral=True)
+            return
+
+        if interaction.user.id == member.id:
+            await interaction.response.send_message(
+                "the curse may only be lifted by another", ephemeral=True
+            )
+            return
+
         self.locked.discard(member.id)
         await interaction.response.send_message(f"Released **{member.display_name}** from uwulock.")
         await self.log_action("Unlocked", interaction.user, member)
