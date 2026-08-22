@@ -54,8 +54,8 @@ class Uwyfy(commands.Cog):
             color=discord.Color.blurple(),
             timestamp=discord.utils.utcnow(),
         )
-        embed.add_field(name="Mod", value=f"{mod.mention} (`{mod.id}`)", inline=True)
-        embed.add_field(name="Target", value=f"{target.mention} (`{target.id}`)", inline=True)
+        embed.add_field(name="Mod", value=f"{mod.display_name} (`{mod.id}`)", inline=True)
+        embed.add_field(name="Target", value=f"{target.display_name} (`{target.id}`)", inline=True)
         await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
