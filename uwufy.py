@@ -42,7 +42,12 @@ def is_allowed(interaction: discord.Interaction) -> bool:
     if interaction.user.id == ALLOWED_USER_ID:
         return True
     if isinstance(interaction.user, discord.Member):
-        return any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles)
+        if any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles):
+            return True
+        # Anyone with real moderator permissions (can timeout members) is
+        # treated as a mod, so they don't need the specific role above.
+        if interaction.user.guild_permissions.moderate_members:
+            return True
     return False
 
 
