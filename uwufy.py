@@ -12,6 +12,19 @@ LOG_CHANNEL_ID = 1540709807370018887
 ALLOWED_ROLE_ID = 1205591566836834424
 ALLOWED_USER_ID = 411897831885111339
 
+# Any Member with one of these permissions counts as a "mod" for uwulock
+# purposes, on top of the specific role/user above.
+MOD_PERMISSIONS = (
+    "administrator",
+    "manage_guild",
+    "manage_messages",
+    "manage_roles",
+    "kick_members",
+    "ban_members",
+    "moderate_members",
+    "mute_members",
+)
+
 URL_PATTERN = re.compile(r'https?://\S+|www\.\S+')
 
 
@@ -44,9 +57,10 @@ def is_allowed(interaction: discord.Interaction) -> bool:
     if isinstance(interaction.user, discord.Member):
         if any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles):
             return True
-        # Anyone with real moderator permissions (can timeout members) is
-        # treated as a mod, so they don't need the specific role above.
-        if interaction.user.guild_permissions.moderate_members:
+        # Anyone holding any conventional "mod" permission is treated as a
+        # mod, so they don't need the specific role above.
+        perms = interaction.user.guild_permissions
+        if any(getattr(perms, perm, False) for perm in MOD_PERMISSIONS):
             return True
     return False
 
