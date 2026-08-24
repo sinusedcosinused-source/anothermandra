@@ -12,6 +12,18 @@ LOG_CHANNEL_ID = 1540709807370018887
 ALLOWED_ROLE_ID = 1205591566836834424
 ALLOWED_USER_ID = 411897831885111339
 
+# Any Member with one of these permissions counts as a "mod" for uwulock
+# purposes, on top of the specific role/user above.
+MOD_PERMISSIONS = (
+    "administrator",
+    "manage_guild",
+    "manage_messages",
+    "manage_roles",
+    "kick_members",
+    "ban_members",
+    "moderate_members",
+)
+
 URL_PATTERN = re.compile(r'https?://\S+|www\.\S+')
 
 
@@ -44,9 +56,10 @@ def is_allowed(interaction: discord.Interaction) -> bool:
     if isinstance(interaction.user, discord.Member):
         if any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles):
             return True
-        # Anyone with real moderator permissions (can timeout members) is
-        # treated as a mod, so they don't need the specific role above.
-        if interaction.user.guild_permissions.moderate_members:
+        # Anyone holding any conventional "mod" permission is treated as a
+        # mod, so they don't need the specific role above.
+        perms = interaction.user.guild_permissions
+        if any(getattr(perms, perm, False) for perm in MOD_PERMISSIONS):
             return True
     return False
 
@@ -88,6 +101,28 @@ class Uwyfy(commands.Cog):
         embed.add_field(name="Target", value=f"{target.display_name} (`{target.id}`)", inline=True)
         await log_channel.send(embed=embed)
 
+    async def _build_reply_prefix(self, message: discord.Message) -> str:
+        """Webhooks can't create a real Discord reply reference, so we fake
+        the look of one by quoting the message being replied to."""
+        if not message.reference or not message.reference.message_id:
+            return ""
+
+        ref_msg = message.reference.resolved
+        if ref_msg is None or isinstance(ref_msg, discord.DeletedReferencedMessage):
+            try:
+                ref_msg = await message.channel.fetch_message(message.reference.message_id)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                return ""
+
+        ref_author = ref_msg.author.display_name
+        ref_content = ref_msg.content or "*attachment/embed*"
+        ref_content = ref_content.replace("\n", " ")
+        if len(ref_content) > 80:
+            ref_content = ref_content[:77] + "..."
+
+        jump = f" [↗]({ref_msg.jump_url})" if hasattr(ref_msg, "jump_url") else ""
+        return f"> ↪️ **{ref_author}:** {ref_content}{jump}\n"
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot or not message.guild or not message.content:
@@ -97,9 +132,12 @@ class Uwyfy(commands.Cog):
 
         try:
             webhook = await self.get_webhook(message.channel)
+            reply_prefix = await self._build_reply_prefix(message)
+            content = reply_prefix + uwuify(message.content)
+
             await message.delete()
             await webhook.send(
-                content=uwuify(message.content),
+                content=content,
                 username=message.author.display_name,
                 avatar_url=message.author.display_avatar.url,
             )
