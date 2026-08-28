@@ -104,18 +104,25 @@ class Uwyfy(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.author.bot or not message.guild or not message.content:
+        if message.author.bot or not message.guild:
+            return
+        if not message.content and not message.attachments:
             return
         if message.author.id not in self.locked:
             return
 
         try:
             webhook = await self.get_webhook(message.channel)
+            # Re-download any attachments (e.g. images) so they can be
+            # re-posted through the webhook instead of being lost when the
+            # original message is deleted.
+            files = [await attachment.to_file() for attachment in message.attachments]
             await message.delete()
             await webhook.send(
-                content=uwuify(message.content),
+                content=uwuify(message.content) if message.content else None,
                 username=message.author.display_name,
                 avatar_url=message.author.display_avatar.url,
+                files=files,
             )
         except discord.Forbidden:
             pass
